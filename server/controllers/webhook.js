@@ -6,23 +6,40 @@ import User from '../models/User.js';
 
 export const clerkWebhook = async (req, res) => {
     try {
+        // Check if webhook secret exists
+        if (!process.env.CLERK_WEBHOOK_SECRET) {
+            console.error('CLERK_WEBHOOK_SECRET is not set in environment variables');
+            return res.status(500).json({ error: 'Webhook secret not configured' });
+        }
+
+        console.log('Webhook received:', {
+            headers: req.headers,
+            body: req.body
+        });
+
         // we will save the info when user is created , deleted or updated
 
-        // create a svix instance with clerl webhook secret
+        // create a svix instance with clerk webhook secret
         const webhook = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
 
         // verify the webhook signature OR hEADERS
-
-        await webhook.verify({
-            "svix-id": req.headers['svix-id'],
-            "svix-timestamp": req.headers['svix-timestamp'],
-            "svix-signature": req.headers['svix-signature']
-        }); 
+        try {
+            await webhook.verify({
+                "svix-id": req.headers['svix-id'],
+                "svix-timestamp": req.headers['svix-timestamp'],
+                "svix-signature": req.headers['svix-signature']
+            });
+            console.log('Webhook signature verified successfully');
+        } catch (verifyError) {
+            console.error('Webhook signature verification failed:', verifyError);
+            return res.status(401).json({ error: 'Invalid webhook signature' });
+        }
 
         // Getting data from request body
-        const {data , type} = req.body;
+        const {data, type} = req.body;
+        console.log('Processing webhook type:', type, 'with data:', data);
 
-        switch(type){
+        switch(type) {
             //!save the user data when user is created
             case 'user.created':{
                 const userData = {
@@ -32,10 +49,10 @@ export const clerkWebhook = async (req, res) => {
                     resume :'',
                     image : data.image_url
                 }
-                await User.create(userData);
-                res.json({})
-                break;
-
+                console.log('Creating user with data:', userData);
+                const createdUser = await User.create(userData);
+                console.log('User created successfully:', createdUser);
+                return res.json({ success: true, user: createdUser });
             }
             case 'user.updated':{
                 const userData = {
@@ -43,20 +60,23 @@ export const clerkWebhook = async (req, res) => {
                     email : data.email_addresses[0].email_address,
                     image : data.image_url
                 }
-                await User.findByIdAndUpdate(data.id, userData, {new: true});
-                res.json({})
-                break;
+                console.log('Updating user with data:', userData);
+                const updatedUser = await User.findByIdAndUpdate(data.id, userData, {new: true});
+                console.log('User updated successfully:', updatedUser);
+                return res.json({ success: true, user: updatedUser });
             }
             case 'user.deleted':{
-                await User.findByIdAndDelete(data.id);
+                console.log('Deleting user with ID:', data.id);
+                const deletedUser = await User.findByIdAndDelete(data.id);
+                console.log('User deleted successfully:', deletedUser);
+                return res.json({ success: true, user: deletedUser });
             }
             default:
-                break;
-                
-             
+                console.log('Unhandled webhook type:', type);
+                return res.status(400).json({ error: 'Unhandled webhook type' });
         }
     } catch (error) {
         console.error("Error in clerk webhook:", error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        return res.status(500).json({ error: 'Internal Server Error', details: error.message });
     }
 }

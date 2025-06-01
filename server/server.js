@@ -33,7 +33,7 @@ app.get("/debug-sentry", function mainHandler(req, res) {
   throw new Error("My first Sentry error!");
 });
 
-app.options('/webhooks' , clerkWebhook)
+app.post('/webhooks' , clerkWebhook)
 
 const PORT = process.env.PORT || 5000;
 
