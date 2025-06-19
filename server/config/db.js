@@ -17,7 +17,7 @@ const connectDB = async () => {
         })
 
         console.log("Attempting to connect to MongoDB with URI:", redactPassword(process.env.MONGODB_URI));
-        await mongoose.connect(`${process.env.MONGODB_URI}/job_portal`)
+        await mongoose.connect(`${process.env.MONGODB_URI}`)
         
     } catch (error) {
         console.error("MongoDB connection failed:", error.message)

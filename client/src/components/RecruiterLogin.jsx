@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import { assets } from "../assets/assets";
+import { useContext } from "react";
+import { AppContext } from "../context/AppContext";
+import { useNavigate } from "react-router-dom";
 
 const RecruiterLogin = () => {
   const [state, setState] = useState("Login");
@@ -9,16 +12,17 @@ const RecruiterLogin = () => {
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [isTextDataSubmitted, setIsTextDataSubmitted] = useState(false);
+  const { setIsRecruiterLoggedIn, backendUrl , setCompanyData , setCompanyToken } = useContext(AppContext);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    console.log(file)
+    console.log(file);
     if (file) {
       setImage(file);
       // Create a preview URL for the selected image
       const reader = new FileReader();
-      reader.onloadend = () => {  
-        console.log(reader.result)
+      reader.onloadend = () => {
+        console.log(reader.result);
         setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
@@ -41,6 +45,29 @@ const RecruiterLogin = () => {
     } else {
       // Handle login logic
       console.log("Login submission");
+      try {
+        if(state === "Login"){
+          const {data} = await axios.post(`${backendUrl}/company/login`, {
+            email,
+            password
+          })
+          console.log(data)
+
+          if (data.success) {
+            console.log("successful login", data);
+            setCompanyData(data.company);
+            setCompanyToken(data.token);
+            localStorage.setItem('CompanyToken', data.token);
+            setIsRecruiterLoggedIn(false);
+            navigate("/dashboard");
+          }
+          else{
+            toast.error(data.message);
+          }
+        }
+      } catch (error) {
+        console.log("error in login", error);
+      }
     }
   };
 
@@ -69,7 +96,9 @@ const RecruiterLogin = () => {
         </p>
         {state === "SignUp" && isTextDataSubmitted ? (
           <div className="space-y-4">
-            <p className="text-center text-gray-700 font-medium">Add your company logo</p>
+            <p className="text-center text-gray-700 font-medium">
+              Add your company logo
+            </p>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
               {imagePreview ? (
                 <div className="space-y-4">
@@ -186,7 +215,11 @@ const RecruiterLogin = () => {
           type="submit"
           className="w-full bg-sky-700 hover:bg-sky-800 text-white py-2 rounded-lg font-semibold transition duration-300"
         >
-          {state === "Login" ? "Login" : isTextDataSubmitted ? "Create Account" : "Next"}
+          {state === "Login"
+            ? "Login"
+            : isTextDataSubmitted
+            ? "Create Account"
+            : "Next"}
         </button>
 
         <p className="text-center text-gray-600">

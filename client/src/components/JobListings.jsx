@@ -47,7 +47,7 @@ const JobListings = () => {
       return newState;
     });
   }
-
+``
   const handleLocationChange = (e, location) => {
     setSelectedLocation(prevloc => {
       const newState = prevloc.includes(location) 
